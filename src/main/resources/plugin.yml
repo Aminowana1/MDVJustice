@@ -1,0 +1,32 @@
+name: MDVJustice
+version: 1.0.0
+main: xyz.mdvcraft.justice.MDVJusticePlugin
+api-version: '1.21'
+author: MDVCRAFT
+description: Moderacion de chat y condenas mineras persistentes para MDVCRAFT.
+softdepend:
+  - nLogin
+  - MDVSocial
+
+commands:
+  justice:
+    description: Comando principal de MDVJustice.
+    usage: /justice
+    aliases: [mdvjustice]
+  castigar:
+    description: Envia un jugador a cumplir una condena minera.
+    usage: /castigar <jugador> <puntos> [razon]
+  liberar:
+    description: Libera manualmente a un jugador de su condena.
+    usage: /liberar <jugador>
+
+permissions:
+  mdvjustice.admin:
+    description: Acceso administrativo completo a MDVJustice.
+    default: op
+  mdvjustice.chat.global.bypass:
+    description: Ignora el modo lento global.
+    default: op
+  mdvjustice.chat.antispam.bypass:
+    description: Ignora la deteccion automatica de spam.
+    default: op

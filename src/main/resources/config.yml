@@ -1,0 +1,328 @@
+# ==========================================================
+# MDVJustice 1.0.0 - MDVCRAFT
+# Moderacion de chat + condenas mineras
+# ==========================================================
+
+database:
+  file: justice.db
+
+permissions:
+  admin: 'mdvjustice.admin'
+  chat-global-bypass: 'mdvjustice.chat.global.bypass'
+  antispam-bypass: 'mdvjustice.chat.antispam.bypass'
+
+# ==========================================================
+# CHAT
+# ==========================================================
+chat:
+  global-slow:
+    # El valor real se puede cambiar con:
+    # /justice chat lento <duracion|off>
+    default-delay: '0s'
+
+  # Slow individual aplicado manualmente:
+  # /justice slowchat <jugador> <delay> <duracion>
+  #
+  # Si coinciden global + individual + antispam + prision,
+  # se usa siempre el delay MAS ALTO.
+
+  antispam:
+    enabled: true
+
+    # Mensajes iguales/normalizados consecutivos necesarios
+    # para disparar el castigo automatico.
+    repeated-message-threshold: 3
+
+    # Cantidad maxima de mensajes dentro de la ventana.
+    burst-message-count: 5
+    burst-window-seconds: 4
+
+    # Slow automatico al detectar spam.
+    punishment-delay: '10s'
+    punishment-duration: '30m'
+
+    # Normalizacion del texto para detectar:
+    # "HOLA", "hola", "hola!!!" como mensajes similares.
+    normalize:
+      lowercase: true
+      strip-colors: true
+      collapse-spaces: true
+      strip-basic-punctuation: true
+
+  mute:
+    broadcast: true
+
+# ==========================================================
+# PRISION / CONDENAS
+# ==========================================================
+prison:
+  enabled: true
+
+  # Punto donde aparecen los castigados.
+  # Se configura con /justice prision setspawn
+  spawn:
+    world: ''
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    yaw: 0.0
+    pitch: 0.0
+
+  # Punto al que va el jugador al ser liberado.
+  # Se configura con /justice prision setlibertad
+  # Si world esta vacio, usa el spawn de release.fallback-world.
+  release:
+    world: ''
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    yaw: 0.0
+    pitch: 0.0
+    fallback-world: 'world5'
+
+  # Region completa de la prision.
+  # /justice prision pos1
+  # /justice prision pos2
+  region:
+    world: ''
+    pos1: {x: 0, y: 0, z: 0}
+    pos2: {x: 0, y: 0, z: 0}
+
+  # Slow propio de cualquier preso.
+  chat-delay: '40s'
+
+  # Durante estos ticks despues de autenticar, MDVJustice
+  # revalida la ubicacion para ganarle a teleports tardios de nLogin.
+  post-auth-lock-ticks: 60
+  post-auth-lock-check-every-ticks: 5
+
+  allowed-auth-commands:
+    - login
+    - l
+    - log
+    - register
+    - reg
+
+  restrictions:
+    prevent-item-drop: true
+    prevent-item-pickup: true
+    prevent-container-open: true
+    prevent-block-place: true
+    prevent-outgoing-damage: true
+    prevent-incoming-pvp: true
+    prevent-death: true
+
+  kit:
+    pickaxe:
+      material: IRON_PICKAXE
+      name: '&8Pico del Esclavo'
+      lore:
+        - '&7Herramienta entregada por MDVJustice.'
+        - '&7No puede romperse ni conservarse fuera de la condena.'
+      unbreakable: true
+      slot: 0
+
+    food:
+      material: COOKED_BEEF
+      name: '&8Racion del Esclavo'
+      amount: 64
+      slot: 8
+      replenish-after-consume: true
+
+  # Titulo visual de Minecraft al castigar/liberar.
+  screen-titles:
+    punish:
+      enabled: true
+      title: '&4&l¡ESCLAVIZADO!'
+      subtitle: '&7Cumple tu condena trabajando en la mina.'
+      fade-in: 10
+      stay: 60
+      fade-out: 20
+
+    release:
+      enabled: true
+      title: '&a&l¡ERES LIBRE!'
+      subtitle: '&7Has cumplido tu condena.'
+      fade-in: 10
+      stay: 60
+      fade-out: 20
+
+  # Integracion SIN API con MDVSocial.
+  # Los comandos se ejecutan SIEMPRE desde consola.
+  integrations:
+    on-punish-console-commands:
+      - 'mdvsocial title punish {player} esclavo'
+    on-release-console-commands:
+      - 'mdvsocial title unpunish {player}'
+
+  progress:
+    bossbar:
+      enabled: true
+      title: '&8⛏ &7Condena: &f{current}&7/&f{required} &8(&e{remaining} restantes&8)'
+      color: RED
+      style: SOLID
+
+    actionbar:
+      enabled: true
+      # 14 ticks = 0.7 segundos.
+      # Durante esos 14 ticks se vuelve a enviar CADA TICK.
+      pulse-ticks: 14
+      message: '&6+{gained} puntos &8| &e{current}&7/&e{required} &8| &7Faltan: &f{remaining}'
+
+# ==========================================================
+# MINA
+# ==========================================================
+mine:
+  enabled: true
+
+  # /justice mina pos1
+  # /justice mina pos2
+  region:
+    world: ''
+    pos1: {x: 0, y: 0, z: 0}
+    pos2: {x: 0, y: 0, z: 0}
+
+  # Regenera solamente espacios AIR de la mina.
+  # Nunca reemplaza un bloque dentro del cuerpo de un jugador.
+  regeneration:
+    enabled: true
+    interval-seconds: 30
+    blocks-per-tick: 80
+    skip-player-occupied-blocks: true
+
+  # weight controla frecuencia.
+  # points controla progreso de condena.
+  blocks:
+    STONE:
+      weight: 82.0
+      points: 1
+    COAL_ORE:
+      weight: 7.0
+      points: 2
+    IRON_ORE:
+      weight: 5.0
+      points: 3
+    COPPER_ORE:
+      weight: 3.0
+      points: 2
+    GOLD_ORE:
+      weight: 1.5
+      points: 5
+    REDSTONE_ORE:
+      weight: 0.8
+      points: 4
+    LAPIS_ORE:
+      weight: 0.4
+      points: 5
+    DIAMOND_ORE:
+      weight: 0.2
+      points: 12
+    EMERALD_ORE:
+      weight: 0.1
+      points: 15
+
+# ==========================================================
+# MENSAJES
+# Todos admiten colores con &
+# ==========================================================
+messages:
+  prefix: '&6&l[&5&lJusticia&6&l] &4&l» &r'
+
+  no-permission: '{prefix}&cNo posees permisos para utilizar este comando.'
+  players-only: '{prefix}&cEste comando solo puede utilizarlo un jugador.'
+  player-not-found: '{prefix}&cNo se encontro al jugador &e{player}&c.'
+  reload: '{prefix}&aConfiguracion recargada correctamente.'
+  invalid-duration: '{prefix}&cDuracion invalida. Ejemplos: &e5s, 10m, 2h, 3d, permanente&c.'
+  invalid-number: '{prefix}&cDebes indicar una cantidad numerica valida.'
+  usage-castigar: '{prefix}&cUso: &e/castigar <jugador> <puntos> [razon]'
+  usage-liberar: '{prefix}&cUso: &e/liberar <jugador>'
+  feature-disabled: '{prefix}&cEsta funcion se encuentra desactivada.'
+
+  global-slow-enabled: '{prefix}&eEl chat global ahora tiene un intervalo de &f{delay}&e entre mensajes.'
+  global-slow-disabled: '{prefix}&aEl modo lento global fue desactivado.'
+  slow-wait: '{prefix}&cDebes esperar &e{remaining} &cantes de volver a escribir.'
+
+  player-slow-applied-staff: '{prefix}&aAplicaste a &e{player} &aun slow de &e{delay} &adurante &e{duration}&a.'
+  player-slow-applied-target: '{prefix}&cTu chat fue limitado a un mensaje cada &e{delay} &cdurante &e{duration}&c.'
+  player-slow-removed-staff: '{prefix}&aQuitaste el slow individual de &e{player}&a.'
+  player-slow-removed-target: '{prefix}&aTu limitacion manual de chat fue retirada.'
+
+  antispam-triggered: '{prefix}&cEl sistema anti-spam limito tu chat a un mensaje cada &e{delay} &cdurante &e{duration}&c.'
+
+  mute-applied-staff: '{prefix}&aSilenciaste a &e{player} &adurante &e{duration}&a. &7Razon: &f{reason}'
+  mute-applied-target: '{prefix}&cHas sido silenciado por &e{staff} &cdurante &e{duration}&c. &7Razon: &f{reason}'
+  mute-broadcast: '{prefix}&e{player} &cfue silenciado por &e{staff} &cdurante &e{duration}&c. &7Razon: &f{reason}'
+  mute-blocked: '{prefix}&cEstas silenciado. &7Tiempo restante: &e{remaining}&7. Razon: &f{reason}'
+  mute-removed-staff: '{prefix}&aQuitaste el silencio de &e{player}&a.'
+  mute-removed-target: '{prefix}&aTu silencio fue retirado.'
+  mute-not-active: '{prefix}&cEse jugador no tiene un silencio activo.'
+
+  prison-not-configured: '{prefix}&cLa prision todavia no esta configurada. Define spawn y region.'
+  mine-not-configured: '{prefix}&cLa region de la mina todavia no esta configurada.'
+  already-prisoner: '{prefix}&c{player} ya posee una condena activa.'
+  not-prisoner: '{prefix}&c{player} no posee una condena activa.'
+
+  punished-staff: '{prefix}&aCondenaste a &e{player} &aa completar &e{required} puntos&a.'
+  punished-target: '{prefix}&cHas sido condenado a trabajos forzados. &7Debes completar &e{required} puntos&7. Razon: &f{reason}'
+  punished-broadcast: '{prefix}&4{player} &cha sido esclavizado por &e{staff}&c. &7Condena: &f{required} puntos&7. Razon: &f{reason}'
+
+  prisoner-command-blocked: '{prefix}&cMientras cumples tu condena no puedes utilizar ese comando.'
+  prisoner-escape: '{prefix}&cNo puedes abandonar la zona de condena.'
+  prisoner-no-break: '{prefix}&cSolo puedes romper los bloques de la mina de la prision.'
+  normal-player-mine-break: '{prefix}&cSolo los condenados pueden trabajar en esta mina.'
+  container-blocked: '{prefix}&cNo puedes utilizar contenedores mientras cumples una condena.'
+
+  released-target: '{prefix}&aHas cumplido tu condena. Eres libre nuevamente.'
+  released-staff: '{prefix}&aLiberaste correctamente a &e{player}&a.'
+  release-pending-offline: '{prefix}&e{player} esta desconectado. La liberacion y restauracion de inventario se completaran al volver a entrar.'
+  released-broadcast: '{prefix}&a{player} ha cumplido su condena y recuperado su libertad.'
+
+  progress-info: '{prefix}&e{player}&7: &f{current}&7/&f{required} puntos &8(&e{remaining} restantes&8).'
+
+  prison-spawn-set: '{prefix}&aSpawn de prision establecido.'
+  release-spawn-set: '{prefix}&aPunto de libertad establecido.'
+  prison-pos1-set: '{prefix}&aPosicion 1 de la prision establecida.'
+  prison-pos2-set: '{prefix}&aPosicion 2 de la prision establecida.'
+  mine-pos1-set: '{prefix}&aPosicion 1 de la mina establecida.'
+  mine-pos2-set: '{prefix}&aPosicion 2 de la mina establecida.'
+  mine-regeneration-started: '{prefix}&aRegeneracion segura de la mina iniciada.'
+  mine-regeneration-busy: '{prefix}&eLa mina ya se esta regenerando.'
+
+  reason-none: 'Sin razon'
+  duration-permanent: 'permanente'
+
+  help:
+    - '&8&m--------------------------------------------------'
+    - '&6&lMDVJustice &7- Guia de comandos'
+    - ''
+    - '&e/justice'
+    - ' &7Muestra esta guia.'
+    - '&e/justice reload'
+    - ' &7Recarga la configuracion.'
+    - ''
+    - '&e/justice chat lento <delay|off>'
+    - ' &7Configura el slow global. Ej: &f/justice chat lento 3s'
+    - '&e/justice slowchat <jugador> <delay|off> [duracion]'
+    - ' &7Slow individual. Ej: &f/justice slowchat Pepe 5s 1h'
+    - '&e/justice silenciar <jugador> <duracion> [razon]'
+    - ' &7Mute temporal o permanente.'
+    - '&e/justice desilenciar <jugador>'
+    - ' &7Retira un mute.'
+    - ''
+    - '&e/castigar <jugador> <puntos> [razon]'
+    - ' &7Envia al jugador a la prision minera.'
+    - '&e/liberar <jugador>'
+    - ' &7Libera manualmente a un condenado.'
+    - '&e/justice prision info <jugador>'
+    - ' &7Muestra su progreso.'
+    - '&e/justice prision setspawn'
+    - ' &7Define el punto de aparicion de los presos.'
+    - '&e/justice prision setlibertad'
+    - ' &7Define donde aparecen al ser liberados.'
+    - '&e/justice prision pos1 / pos2'
+    - ' &7Define los limites de toda la prision.'
+    - '&e/justice mina pos1 / pos2'
+    - ' &7Define la region regenerable.'
+    - '&e/justice mina regenerar'
+    - ' &7Regenera AIR de forma segura, sin encerrar jugadores.'
+    - '&8&m--------------------------------------------------'
