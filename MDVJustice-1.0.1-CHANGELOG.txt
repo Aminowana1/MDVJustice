@@ -1,0 +1,31 @@
+MDVJustice 1.0.1
+
+FIXES / CAMBIOS
+1. Seleccion de mina segura
+   - La mina no es valida hasta ejecutar pos1 Y pos2.
+   - En actualizaciones desde 1.0.0, vuelve a marcar ambas posiciones una vez.
+   - Posiciones en mundos distintos invalidan la seleccion.
+   - max-volume evita regeneraciones gigantes accidentales.
+
+2. Kit de prision
+   - Se vacia el inventario antes del TP.
+   - El kit se entrega DESPUES del cambio de mundo.
+   - Segunda comprobacion 5 ticks despues.
+   - Guardian configurable repara el kit periodicamente.
+   - Los items de prision nunca quedan tirados como entidades.
+   - Se bloquea mover/arrastrar/swapear el kit.
+   - Slot default de comida: 7 para evitar conflicto con hotbars de lobby.
+
+3. Cualquier bloque en la mina
+   - mine.blocks acepta cualquier Material que sea bloque.
+   - Ejemplos: DIORITE, ANDESITE, GRANITE, DEEPSLATE, OBSIDIAN.
+   - Cada bloque tiene weight y points.
+   - Siguen sin dropear items ni XP.
+
+4. Autocompletado TAB
+   - /justice chat lento -> off, 1s, 3s, 5s...
+   - /justice slowchat -> delay y duracion
+   - /justice silenciar -> duraciones
+   - /castigar -> jugadores y puntos sugeridos
+   - /liberar -> presos conectados
+   - Sugerencias editables desde config.yml.

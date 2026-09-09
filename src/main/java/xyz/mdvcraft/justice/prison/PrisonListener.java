@@ -8,6 +8,8 @@ import org.bukkit.event.*;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.*;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
@@ -125,6 +127,44 @@ public final class PrisonListener implements Listener {
     public void onDrop(PlayerDropItemEvent event) {
         if (!prison.isEnforced(event.getPlayer().getUniqueId())) return;
         if (!plugin.getConfig().getBoolean("prison.restrictions.prevent-item-drop", true)) return;
+        event.setCancelled(true);
+    }
+
+    /**
+     * Si otro plugin intenta expulsar al suelo un ítem del kit (por ejemplo al
+     * escribir en el mismo slot de la hotbar), el ítem de prisión nunca llega
+     * a existir como drop. El guardián de kit lo vuelve a colocar en inventario.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPrisonItemSpawn(ItemSpawnEvent event) {
+        if (prison.kitManager().isPrisonItem(event.getEntity().getItemStack())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (!prison.isEnforced(player.getUniqueId())) return;
+
+        event.setCancelled(true);
+        plugin.getServer().getScheduler().runTask(plugin,
+                () -> prison.kitManager().ensure(player));
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (!prison.isEnforced(player.getUniqueId())) return;
+
+        event.setCancelled(true);
+        plugin.getServer().getScheduler().runTask(plugin,
+                () -> prison.kitManager().ensure(player));
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onSwapHand(PlayerSwapHandItemsEvent event) {
+        if (!prison.isEnforced(event.getPlayer().getUniqueId())) return;
         event.setCancelled(true);
     }
 

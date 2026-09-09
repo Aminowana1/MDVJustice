@@ -263,14 +263,29 @@ public final class JusticeCommand implements CommandExecutor, TabCompleter {
         }
 
         switch (args[1].toLowerCase(Locale.ROOT)) {
-            case "pos1" -> setCuboidPoint(sender, "mine.region", "pos1", "mine-pos1-set");
-            case "pos2" -> setCuboidPoint(sender, "mine.region", "pos2", "mine-pos2-set");
+            case "pos1" -> setMinePoint(sender, "pos1");
+            case "pos2" -> setMinePoint(sender, "pos2");
             case "regenerar" -> {
-                if (mine.regenerate(false)) {
-                    plugin.send(sender, "mine-regeneration-started", Map.of());
-                } else {
-                    plugin.send(sender, mine.region() == null
-                            ? "mine-not-configured" : "mine-regeneration-busy", Map.of());
+                MineManager.RegenerationResult result = mine.regenerate();
+
+                switch (result) {
+                    case STARTED ->
+                            plugin.send(sender, "mine-regeneration-started", Map.of());
+                    case BUSY ->
+                            plugin.send(sender, "mine-regeneration-busy", Map.of());
+                    case NOT_CONFIGURED ->
+                            plugin.send(sender, "mine-not-configured", Map.of());
+                    case NO_VALID_BLOCKS ->
+                            plugin.send(sender, "mine-no-valid-blocks", Map.of());
+                    case WORLD_UNAVAILABLE ->
+                            plugin.send(sender, "mine-world-unavailable", Map.of());
+                    case TOO_LARGE -> {
+                        long volume = mine.region() == null ? 0L : mine.region().volume();
+                        plugin.send(sender, "mine-volume-too-large", Map.of(
+                                "volume", Long.toString(volume),
+                                "max", Long.toString(mine.maxVolume())
+                        ));
+                    }
                 }
             }
             default -> sendHelp(sender);
@@ -305,6 +320,67 @@ public final class JusticeCommand implements CommandExecutor, TabCompleter {
         plugin.getConfig().set(path + "." + point + ".z", player.getLocation().getBlockZ());
         plugin.saveConfig();
         plugin.send(sender, message, Map.of());
+    }
+
+    private void setMinePoint(CommandSender sender, String point) {
+        Player player = requirePlayer(sender);
+        if (player == null) return;
+
+        String path = "mine.region";
+        String currentWorld = player.getWorld().getName();
+        String storedWorld = plugin.getConfig().getString(path + ".world", "");
+
+        boolean pos1Set = plugin.getConfig().getBoolean(path + ".pos1-set", false);
+        boolean pos2Set = plugin.getConfig().getBoolean(path + ".pos2-set", false);
+
+        // Si una esquina fue tomada en otro mundo, se invalida por seguridad.
+        if (storedWorld != null && !storedWorld.isBlank()
+                && !storedWorld.equalsIgnoreCase(currentWorld)) {
+            pos1Set = false;
+            pos2Set = false;
+            plugin.getConfig().set(path + ".pos1-set", false);
+            plugin.getConfig().set(path + ".pos2-set", false);
+            plugin.getConfig().set(path + ".configured", false);
+            plugin.send(sender, "mine-region-world-reset", Map.of());
+        }
+
+        plugin.getConfig().set(path + ".world", currentWorld);
+        plugin.getConfig().set(path + "." + point + ".x", player.getLocation().getBlockX());
+        plugin.getConfig().set(path + "." + point + ".y", player.getLocation().getBlockY());
+        plugin.getConfig().set(path + "." + point + ".z", player.getLocation().getBlockZ());
+        plugin.getConfig().set(path + "." + point + "-set", true);
+
+        if (point.equals("pos1")) pos1Set = true;
+        if (point.equals("pos2")) pos2Set = true;
+
+        boolean configured = pos1Set && pos2Set;
+        plugin.getConfig().set(path + ".configured", configured);
+        plugin.saveConfig();
+
+        if (!configured) {
+            plugin.send(sender,
+                    point.equals("pos1") ? "mine-pos1-set" : "mine-pos2-set",
+                    Map.of());
+            return;
+        }
+
+        mine.reload();
+        long volume = mine.region() == null ? 0L : mine.region().volume();
+
+        if (volume <= 0L || volume > mine.maxVolume()) {
+            plugin.getConfig().set(path + ".configured", false);
+            plugin.saveConfig();
+
+            plugin.send(sender, "mine-volume-too-large", Map.of(
+                    "volume", Long.toString(volume),
+                    "max", Long.toString(mine.maxVolume())
+            ));
+            return;
+        }
+
+        plugin.send(sender, "mine-region-ready", Map.of(
+                "volume", Long.toString(volume)
+        ));
     }
 
     private void sendHelp(CommandSender sender) {
@@ -345,7 +421,54 @@ public final class JusticeCommand implements CommandExecutor, TabCompleter {
                     .map(Player::getName).toList());
         }
 
+        // /justice chat lento <delay|off>
+        if (args.length == 3
+                && args[0].equalsIgnoreCase("chat")
+                && args[1].equalsIgnoreCase("lento")) {
+            return partial(args[2], chatDelaySuggestions());
+        }
+
+        // /justice slowchat <jugador> <delay|off>
+        if (args.length == 3 && args[0].equalsIgnoreCase("slowchat")) {
+            return partial(args[2], chatDelaySuggestions());
+        }
+
+        // /justice slowchat <jugador> <delay> <duracion>
+        if (args.length == 4
+                && args[0].equalsIgnoreCase("slowchat")
+                && !args[2].equalsIgnoreCase("off")) {
+            return partial(args[3], sanctionDurationSuggestions());
+        }
+
+        // /justice silenciar <jugador> <duracion>
+        if (args.length == 3 && args[0].equalsIgnoreCase("silenciar")) {
+            return partial(args[2], sanctionDurationSuggestions());
+        }
+
+        if (args.length == 3
+                && args[0].equalsIgnoreCase("prision")
+                && args[1].equalsIgnoreCase("info")) {
+            return partial(args[2], Bukkit.getOnlinePlayers().stream()
+                    .map(Player::getName).toList());
+        }
+
         return Collections.emptyList();
+    }
+
+    private List<String> chatDelaySuggestions() {
+        List<String> configured = plugin.getConfig()
+                .getStringList("commands.tab-suggestions.chat-delays");
+        return configured.isEmpty()
+                ? List.of("off", "1s", "3s", "5s", "10s", "30s", "1m")
+                : configured;
+    }
+
+    private List<String> sanctionDurationSuggestions() {
+        List<String> configured = plugin.getConfig()
+                .getStringList("commands.tab-suggestions.sanction-durations");
+        return configured.isEmpty()
+                ? List.of("10m", "30m", "1h", "6h", "12h", "1d", "3d", "7d", "permanente")
+                : configured;
     }
 
     private List<String> partial(String token, Collection<String> values) {

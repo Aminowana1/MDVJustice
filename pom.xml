@@ -6,7 +6,7 @@
 
     <groupId>xyz.mdvcraft</groupId>
     <artifactId>MDVJustice</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <packaging>jar</packaging>
 
     <name>MDVJustice</name>
@@ -57,7 +57,7 @@
     </dependencies>
 
     <build>
-        <finalName>MDVJustice-1.0.0</finalName>
+        <finalName>MDVJustice-1.0.1</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

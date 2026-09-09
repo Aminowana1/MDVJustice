@@ -5,10 +5,9 @@ import org.bukkit.entity.Player;
 import xyz.mdvcraft.justice.MDVJusticePlugin;
 import xyz.mdvcraft.justice.prison.PrisonManager;
 
-import java.util.Arrays;
-import java.util.Map;
+import java.util.*;
 
-public final class PunishCommand implements CommandExecutor {
+public final class PunishCommand implements CommandExecutor, TabCompleter {
     private final MDVJusticePlugin plugin;
     private final PrisonManager prison;
 
@@ -55,5 +54,33 @@ public final class PunishCommand implements CommandExecutor {
 
         prison.punish(sender, target, points, reason);
         return true;
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command,
+                                      String alias, String[] args) {
+        if (args.length == 1) {
+            return partial(args[0], plugin.getServer().getOnlinePlayers().stream()
+                    .map(Player::getName).toList());
+        }
+
+        if (args.length == 2) {
+            List<String> configured = plugin.getConfig()
+                    .getStringList("commands.tab-suggestions.prison-points");
+            if (configured.isEmpty()) {
+                configured = List.of("100", "250", "500", "1000", "2500", "5000");
+            }
+            return partial(args[1], configured);
+        }
+
+        return Collections.emptyList();
+    }
+
+    private List<String> partial(String token, Collection<String> values) {
+        String lower = token.toLowerCase(Locale.ROOT);
+        return values.stream()
+                .filter(v -> v.toLowerCase(Locale.ROOT).startsWith(lower))
+                .sorted()
+                .toList();
     }
 }

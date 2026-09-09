@@ -68,15 +68,19 @@ public final class MDVJusticePlugin extends JavaPlugin {
 
         Objects.requireNonNull(getCommand("justice")).setExecutor(justiceCommand);
         Objects.requireNonNull(getCommand("justice")).setTabCompleter(justiceCommand);
-        Objects.requireNonNull(getCommand("castigar"))
-                .setExecutor(new PunishCommand(this, prisonManager));
-        Objects.requireNonNull(getCommand("liberar"))
-                .setExecutor(new ReleaseCommand(this, prisonManager));
+
+        PunishCommand punishCommand = new PunishCommand(this, prisonManager);
+        Objects.requireNonNull(getCommand("castigar")).setExecutor(punishCommand);
+        Objects.requireNonNull(getCommand("castigar")).setTabCompleter(punishCommand);
+
+        ReleaseCommand releaseCommand = new ReleaseCommand(this, prisonManager);
+        Objects.requireNonNull(getCommand("liberar")).setExecutor(releaseCommand);
+        Objects.requireNonNull(getCommand("liberar")).setTabCompleter(releaseCommand);
 
         getServer().getScheduler().runTaskTimer(
                 this, chatManager::cleanupExpired, 1200L, 1200L);
 
-        getLogger().info("MDVJustice 1.0.0 habilitado.");
+        getLogger().info("MDVJustice 1.0.1 habilitado.");
     }
 
     @Override

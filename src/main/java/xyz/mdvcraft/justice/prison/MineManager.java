@@ -12,7 +12,9 @@ import org.bukkit.util.BoundingBox;
 import xyz.mdvcraft.justice.MDVJusticePlugin;
 import xyz.mdvcraft.justice.prison.model.Cuboid;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 
 public final class MineManager {
@@ -29,26 +31,40 @@ public final class MineManager {
 
     public void reload() {
         definitions.clear();
+
         ConfigurationSection blocks = plugin.getConfig().getConfigurationSection("mine.blocks");
         if (blocks == null) return;
 
         for (String key : blocks.getKeys(false)) {
             Material material = Material.matchMaterial(key);
-            if (material == null || material.isAir()) continue;
+            if (material == null || material.isAir() || !material.isBlock()) {
+                plugin.getLogger().warning("mine.blocks." + key
+                        + " ignorado: no es un bloque valido de Minecraft.");
+                continue;
+            }
 
             ConfigurationSection section = blocks.getConfigurationSection(key);
             if (section == null) continue;
 
             double weight = Math.max(0.0, section.getDouble("weight", 0.0));
             int points = Math.max(0, section.getInt("points", 0));
-            if (weight > 0.0 && points > 0) {
-                definitions.add(new MineBlockDef(material, weight, points));
+
+            if (weight <= 0.0 || points <= 0) {
+                plugin.getLogger().warning("mine.blocks." + key
+                        + " ignorado: weight y points deben ser mayores a 0.");
+                continue;
             }
+
+            definitions.add(new MineBlockDef(material, weight, points));
         }
     }
 
     public void startScheduler() {
-        if (intervalTask != null) intervalTask.cancel();
+        if (intervalTask != null) {
+            intervalTask.cancel();
+            intervalTask = null;
+        }
+
         if (!plugin.getConfig().getBoolean("mine.regeneration.enabled", true)) return;
 
         long seconds = Math.max(1,
@@ -56,15 +72,29 @@ public final class MineManager {
         long ticks = seconds * 20L;
 
         intervalTask = Bukkit.getScheduler().runTaskTimer(
-                plugin, () -> regenerate(false), ticks, ticks);
+                plugin, this::regenerate, ticks, ticks);
     }
 
     public void shutdown() {
         if (intervalTask != null) intervalTask.cancel();
     }
 
+    /**
+     * A partir de 1.0.1 una mina solamente existe cuando AMBAS posiciones
+     * fueron confirmadas expresamente mediante los comandos.
+     */
     public Cuboid region() {
-        return Cuboid.from(plugin.getConfig().getConfigurationSection("mine.region"));
+        ConfigurationSection section =
+                plugin.getConfig().getConfigurationSection("mine.region");
+        if (section == null) return null;
+
+        if (!section.getBoolean("configured", false)
+                || !section.getBoolean("pos1-set", false)
+                || !section.getBoolean("pos2-set", false)) {
+            return null;
+        }
+
+        return Cuboid.from(section);
     }
 
     public boolean contains(org.bukkit.Location location) {
@@ -72,6 +102,10 @@ public final class MineManager {
         return cuboid != null && cuboid.contains(location);
     }
 
+    /**
+     * Funciona con cualquier bloque configurado: STONE, DIORITE, OBSIDIAN,
+     * ores, etc. No existe una lista cerrada de minerales.
+     */
     public int pointsFor(Material material) {
         for (MineBlockDef def : definitions) {
             if (def.material() == material) return def.points();
@@ -79,14 +113,33 @@ public final class MineManager {
         return 0;
     }
 
-    public boolean regenerate(boolean notifyOnly) {
-        if (regenerationRunning) return false;
+    public boolean isRegenerationRunning() {
+        return regenerationRunning;
+    }
+
+    public long maxVolume() {
+        return Math.max(1L,
+                plugin.getConfig().getLong("mine.regeneration.max-volume", 100000L));
+    }
+
+    public RegenerationResult regenerate() {
+        if (regenerationRunning) return RegenerationResult.BUSY;
 
         Cuboid cuboid = region();
-        if (cuboid == null || definitions.isEmpty()) return false;
+        if (cuboid == null) return RegenerationResult.NOT_CONFIGURED;
+
+        if (definitions.isEmpty()) return RegenerationResult.NO_VALID_BLOCKS;
+
+        long volume = cuboid.volume();
+        long maxVolume = maxVolume();
+        if (volume > maxVolume) {
+            plugin.getLogger().severe("Regeneracion de mina abortada por seguridad: "
+                    + volume + " bloques supera el maximo configurado de " + maxVolume + ".");
+            return RegenerationResult.TOO_LARGE;
+        }
 
         World world = Bukkit.getWorld(cuboid.worldName());
-        if (world == null) return false;
+        if (world == null) return RegenerationResult.WORLD_UNAVAILABLE;
 
         regenerationRunning = true;
 
@@ -129,9 +182,11 @@ public final class MineManager {
                 if (z > cuboid.maxZ()) {
                     z = cuboid.minZ();
                     y++;
+
                     if (y > cuboid.maxY()) {
                         y = cuboid.minY();
                         x++;
+
                         if (x > cuboid.maxX()) {
                             finished = true;
                         }
@@ -140,15 +195,17 @@ public final class MineManager {
             }
         }.runTaskTimer(plugin, 1L, 1L);
 
-        return true;
+        return RegenerationResult.STARTED;
     }
 
     private boolean occupiedByPlayer(Block block) {
         BoundingBox blockBox = BoundingBox.of(block);
+
         for (Player player : block.getWorld().getPlayers()) {
             if (!player.isOnline()) continue;
             if (player.getBoundingBox().overlaps(blockBox)) return true;
         }
+
         return false;
     }
 
@@ -161,7 +218,17 @@ public final class MineManager {
             roll -= def.weight();
             if (roll <= 0.0) return def.material();
         }
+
         return definitions.get(0).material();
+    }
+
+    public enum RegenerationResult {
+        STARTED,
+        BUSY,
+        NOT_CONFIGURED,
+        TOO_LARGE,
+        NO_VALID_BLOCKS,
+        WORLD_UNAVAILABLE
     }
 
     private record MineBlockDef(Material material, double weight, int points) {

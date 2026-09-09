@@ -28,12 +28,14 @@ public final class PrisonManager {
     private final Map<UUID, BossBar> bossBars = new ConcurrentHashMap<>();
     private final Map<UUID, BukkitTask> actionBarTasks = new ConcurrentHashMap<>();
     private final Map<UUID, BukkitTask> authLockTasks = new ConcurrentHashMap<>();
+    private BukkitTask kitGuardTask;
 
     public PrisonManager(MDVJusticePlugin plugin, JusticeRepository repository) throws SQLException {
         this.plugin = plugin;
         this.repository = repository;
         this.kitManager = new PrisonKitManager(plugin);
         this.sentences.putAll(repository.loadOpenSentences());
+        startKitGuard();
     }
 
     public PrisonKitManager kitManager() {
@@ -230,7 +232,9 @@ public final class PrisonManager {
         removeBossBar(player);
         cancelActionBar(player.getUniqueId());
 
-        kitManager.issue(player);
+        // No volvemos a crear el kit al liberar: se limpia directamente y
+        // luego se restaura el snapshot original.
+        kitManager.clearForPrison(player);
         sentence.snapshot().restore(player);
 
         runConsoleCommands("prison.integrations.on-release-console-commands", player);
@@ -301,10 +305,42 @@ public final class PrisonManager {
         player.setFoodLevel(20);
         player.setSaturation(20.0f);
 
-        kitManager.issue(player);
+        // Primero quitamos el inventario y hacemos el TP. El kit se entrega DESPUES
+        // del cambio de mundo para que plugins del lobby (libros, hotbar, etc.)
+        // no desplacen la comida y la terminen tirando al piso.
+        kitManager.clearForPrison(player);
 
         Location spawn = prisonSpawn();
         if (spawn != null) safeTeleport(player, spawn);
+
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (player.isOnline() && isActive(player.getUniqueId())) {
+                kitManager.issue(player);
+            }
+        }, 1L);
+
+        // Segunda pasada corta por compatibilidad con plugins que aplican inventarios
+        // unos ticks despues de cambiar de mundo.
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (player.isOnline() && isActive(player.getUniqueId())) {
+                kitManager.ensure(player);
+            }
+        }, 5L);
+    }
+
+    private void startKitGuard() {
+        if (kitGuardTask != null) kitGuardTask.cancel();
+
+        long interval = Math.max(1L,
+                plugin.getConfig().getLong("prison.kit-guard-interval-ticks", 10L));
+
+        kitGuardTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            for (UUID uuid : enforced) {
+                Player player = Bukkit.getPlayer(uuid);
+                if (player == null || !player.isOnline() || !isActive(uuid)) continue;
+                kitManager.ensure(player);
+            }
+        }, interval, interval);
     }
 
     public void ensureInside(Player player) {
@@ -518,5 +554,10 @@ public final class PrisonManager {
 
         for (BukkitTask task : authLockTasks.values()) task.cancel();
         authLockTasks.clear();
+
+        if (kitGuardTask != null) {
+            kitGuardTask.cancel();
+            kitGuardTask = null;
+        }
     }
 }

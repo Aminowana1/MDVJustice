@@ -1,6 +1,18 @@
-# MDVJustice 1.0.0
+# MDVJustice 1.0.1
 
 Plugin de moderación y condenas personalizadas para **MDVCRAFT / Purpur-Paper 1.21.6**.
+
+## Cambios 1.0.1
+
+- **Selección de mina segura:** la mina no existe hasta ejecutar `/justice mina pos1` y `/justice mina pos2`.
+- Al actualizar desde 1.0.0 debes volver a marcar ambas posiciones una vez.
+- Si pos1 y pos2 se toman en mundos diferentes, la selección anterior se invalida.
+- `mine.regeneration.max-volume` aborta regiones absurdamente grandes antes de tocar bloques.
+- El kit de prisión se entrega después del teleport y se revalida periódicamente para evitar conflictos con hotbars de lobby.
+- Los ítems propios de prisión nunca quedan como drops del suelo.
+- `mine.blocks` acepta **cualquier Material que sea bloque**: STONE, DIORITE, OBSIDIAN, DEEPSLATE, ores, etc.
+- TAB sugiere `off`, delays (`3s`, `5s`...) y duraciones (`30m`, `1h`, `1d`, `permanente`).
+- `/castigar` sugiere jugadores y cantidades de puntos; `/liberar` sugiere presos conectados.
 
 ## Módulos
 
@@ -87,7 +99,7 @@ mvn clean package
 Salida:
 
 ```text
-target/MDVJustice-1.0.0.jar
+target/MDVJustice-1.0.1.jar
 ```
 
 También incluye `.github/workflows/build.yml`, por lo que GitHub Actions compila y sube el JAR automáticamente.

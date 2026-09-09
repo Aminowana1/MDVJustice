@@ -1,5 +1,5 @@
 # ==========================================================
-# MDVJustice 1.0.0 - MDVCRAFT
+# MDVJustice 1.0.1 - MDVCRAFT
 # Moderacion de chat + condenas mineras
 # ==========================================================
 
@@ -10,6 +10,35 @@ permissions:
   admin: 'mdvjustice.admin'
   chat-global-bypass: 'mdvjustice.chat.global.bypass'
   antispam-bypass: 'mdvjustice.chat.antispam.bypass'
+
+# Sugerencias que aparecen al pulsar TAB en los comandos.
+commands:
+  tab-suggestions:
+    chat-delays:
+      - 'off'
+      - '1s'
+      - '3s'
+      - '5s'
+      - '10s'
+      - '30s'
+      - '1m'
+    sanction-durations:
+      - '10m'
+      - '30m'
+      - '1h'
+      - '6h'
+      - '12h'
+      - '1d'
+      - '3d'
+      - '7d'
+      - 'permanente'
+    prison-points:
+      - '100'
+      - '250'
+      - '500'
+      - '1000'
+      - '2500'
+      - '5000'
 
 # ==========================================================
 # CHAT
@@ -112,6 +141,10 @@ prison:
     prevent-incoming-pvp: true
     prevent-death: true
 
+  # Revalida el kit de los presos. Es util si otro plugin del lobby
+  # intenta colocar objetos en la hotbar al cambiar de mundo.
+  kit-guard-interval-ticks: 10
+
   kit:
     pickaxe:
       material: IRON_PICKAXE
@@ -126,7 +159,9 @@ prison:
       material: COOKED_BEEF
       name: '&8Racion del Esclavo'
       amount: 64
-      slot: 8
+      # Slot 7 por defecto para no chocar con el Libro del Viajero/slot 8.
+      # Puedes cambiarlo si tu lobby utiliza otro slot.
+      slot: 7
       replenish-after-consume: true
 
   # Titulo visual de Minecraft al castigar/liberar.
@@ -178,6 +213,12 @@ mine:
   # /justice mina pos1
   # /justice mina pos2
   region:
+    # SEGURIDAD 1.0.1:
+    # La mina NO existe para MDVJustice hasta definir pos1 Y pos2.
+    # Al actualizar desde 1.0.0, vuelve a ejecutar ambos comandos una vez.
+    configured: false
+    pos1-set: false
+    pos2-set: false
     world: ''
     pos1: {x: 0, y: 0, z: 0}
     pos2: {x: 0, y: 0, z: 0}
@@ -190,36 +231,48 @@ mine:
     blocks-per-tick: 80
     skip-player-occupied-blocks: true
 
-  # weight controla frecuencia.
-  # points controla progreso de condena.
+    # SEGURIDAD EXTRA: si por cualquier error la seleccion supera
+    # este volumen, la regeneracion se aborta sin modificar el mundo.
+    max-volume: 100000
+
+  # Puede ser CUALQUIER bloque vanilla valido, no solamente minerales.
+  # weight = frecuencia relativa (no hace falta que sume 100).
+  # points = puntos que obtiene el preso al romperlo.
+  #
+  # Ejemplos:
+  # DIORITE -> 2 puntos
+  # OBSIDIAN -> 30 puntos
   blocks:
     STONE:
-      weight: 82.0
+      weight: 60.0
       points: 1
-    COAL_ORE:
-      weight: 7.0
+    DIORITE:
+      weight: 12.0
       points: 2
-    IRON_ORE:
+    ANDESITE:
+      weight: 10.0
+      points: 2
+    GRANITE:
+      weight: 8.0
+      points: 2
+    DEEPSLATE:
       weight: 5.0
       points: 3
-    COPPER_ORE:
-      weight: 3.0
-      points: 2
-    GOLD_ORE:
-      weight: 1.5
-      points: 5
-    REDSTONE_ORE:
-      weight: 0.8
+    COAL_ORE:
+      weight: 2.0
       points: 4
-    LAPIS_ORE:
-      weight: 0.4
-      points: 5
+    IRON_ORE:
+      weight: 1.5
+      points: 6
+    GOLD_ORE:
+      weight: 0.7
+      points: 10
     DIAMOND_ORE:
-      weight: 0.2
-      points: 12
-    EMERALD_ORE:
-      weight: 0.1
-      points: 15
+      weight: 0.3
+      points: 20
+    OBSIDIAN:
+      weight: 0.5
+      points: 30
 
 # ==========================================================
 # MENSAJES
@@ -258,7 +311,12 @@ messages:
   mute-not-active: '{prefix}&cEse jugador no tiene un silencio activo.'
 
   prison-not-configured: '{prefix}&cLa prision todavia no esta configurada. Define spawn y region.'
-  mine-not-configured: '{prefix}&cLa region de la mina todavia no esta configurada.'
+  mine-not-configured: '{prefix}&cLa mina no esta lista. Debes definir &epos1 Y pos2 &cen el mismo mundo.'
+  mine-region-ready: '{prefix}&aMina configurada correctamente. &7Volumen: &f{volume} bloques&7.'
+  mine-region-world-reset: '{prefix}&eCambiaste de mundo al seleccionar la mina. La otra posicion fue invalidada por seguridad.'
+  mine-volume-too-large: '{prefix}&cRegeneracion cancelada: la mina tiene &e{volume} bloques &cy el maximo permitido es &e{max}&c.'
+  mine-no-valid-blocks: '{prefix}&cNo hay bloques validos configurados en &emine.blocks&c.'
+  mine-world-unavailable: '{prefix}&cEl mundo configurado para la mina no esta cargado.'
   already-prisoner: '{prefix}&c{player} ya posee una condena activa.'
   not-prisoner: '{prefix}&c{player} no posee una condena activa.'
 
@@ -283,8 +341,8 @@ messages:
   release-spawn-set: '{prefix}&aPunto de libertad establecido.'
   prison-pos1-set: '{prefix}&aPosicion 1 de la prision establecida.'
   prison-pos2-set: '{prefix}&aPosicion 2 de la prision establecida.'
-  mine-pos1-set: '{prefix}&aPosicion 1 de la mina establecida.'
-  mine-pos2-set: '{prefix}&aPosicion 2 de la mina establecida.'
+  mine-pos1-set: '{prefix}&aPosicion 1 de la mina guardada. &7Ahora define la posicion 2.'
+  mine-pos2-set: '{prefix}&aPosicion 2 de la mina guardada. &7Ahora define la posicion 1.'
   mine-regeneration-started: '{prefix}&aRegeneracion segura de la mina iniciada.'
   mine-regeneration-busy: '{prefix}&eLa mina ya se esta regenerando.'
 
