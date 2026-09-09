@@ -1,9 +1,14 @@
 name: MDVJustice
-version: 1.0.1
+version: '${project.version}'
 main: xyz.mdvcraft.justice.MDVJusticePlugin
 api-version: '1.21'
 author: MDVCRAFT
 description: Moderacion de chat y condenas mineras persistentes para MDVCRAFT.
+
+# Paper/Purpur descarga esta libreria al iniciar el plugin.
+# Ya NO va empaquetada dentro de MDVJustice.jar.
+libraries:
+  - org.xerial:sqlite-jdbc:3.46.1.0
 softdepend:
   - nLogin
   - MDVSocial

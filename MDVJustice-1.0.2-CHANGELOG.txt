@@ -1,0 +1,24 @@
+MDVJustice 1.0.2
+
+BUILD / DISTRIBUCION
+- sqlite-jdbc 3.46.1.0 pasa a scope PROVIDED.
+- Se elimina maven-shade-plugin.
+- plugin.yml declara:
+    libraries:
+      - org.xerial:sqlite-jdbc:3.46.1.0
+- Paper/Purpur descarga/carga SQLite como libreria del plugin.
+
+VERSIONADO AUTOMATICO
+- pom.xml:
+    <finalName>MDVJustice-${project.version}</finalName>
+- plugin.yml:
+    version: '${project.version}'
+  Maven filtra resources y coloca la version real.
+- build.yml obtiene project.version mediante Maven y usa ese valor
+  tanto para el nombre del artifact como para la ruta del JAR.
+
+A partir de ahora, para subir la version solo hace falta modificar:
+  <version>...</version>
+en pom.xml.
+
+No se modifico la logica funcional de chat, prision o mina de 1.0.1.

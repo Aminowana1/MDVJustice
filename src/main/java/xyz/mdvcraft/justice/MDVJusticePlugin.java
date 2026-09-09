@@ -80,7 +80,7 @@ public final class MDVJusticePlugin extends JavaPlugin {
         getServer().getScheduler().runTaskTimer(
                 this, chatManager::cleanupExpired, 1200L, 1200L);
 
-        getLogger().info("MDVJustice 1.0.1 habilitado.");
+        getLogger().info("MDVJustice " + getDescription().getVersion() + " habilitado.");
     }
 
     @Override

@@ -1,4 +1,22 @@
-# MDVJustice 1.0.1
+# MDVJustice 1.0.2
+
+## Cambios 1.0.2
+
+- `sqlite-jdbc` ya no se sombrea/embebe dentro del JAR de MDVJustice.
+- Paper/Purpur lo carga mediante `libraries:` desde `plugin.yml`.
+- Se eliminó `maven-shade-plugin`.
+- El nombre final del JAR usa `${project.version}` automáticamente.
+- `plugin.yml` toma la versión automáticamente desde Maven.
+- GitHub Actions lee `project.version` desde `pom.xml`, por lo que ya no hay que editar `build.yml` en cada versión.
+
+Para futuras versiones basta cambiar una sola línea en `pom.xml`:
+
+```xml
+<version>1.0.X</version>
+```
+
+El JAR y el artifact de GitHub usarán esa versión automáticamente.
+
 
 Plugin de moderación y condenas personalizadas para **MDVCRAFT / Purpur-Paper 1.21.6**.
 
@@ -99,7 +117,7 @@ mvn clean package
 Salida:
 
 ```text
-target/MDVJustice-1.0.1.jar
+target/MDVJustice-1.0.2.jar
 ```
 
 También incluye `.github/workflows/build.yml`, por lo que GitHub Actions compila y sube el JAR automáticamente.
