@@ -29,6 +29,6 @@ jobs:
       - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
-          name: MDVJustice-1.0.0
-          path: target/MDVJustice-1.0.0.jar
+          name: MDVJustice-1.0.1
+          path: target/MDVJustice-1.0.1.jar
           if-no-files-found: error
